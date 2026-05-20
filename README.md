@@ -1,2 +1,3 @@
-# regdir
-RegDir, 
+# REGDIR
+
+RegDir
