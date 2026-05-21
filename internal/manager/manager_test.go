@@ -245,3 +245,40 @@ func TestChangeFileNamesWithSecondRules(t *testing.T) {
 		t.Errorf("expected pre-existing collision file to remain: %v", err)
 	}
 }
+
+func TestChangeFileNamesWithPattern(t *testing.T) {
+
+	// Create a temporary directory for testing
+	tempDir, err := os.MkdirTemp("", "testdir")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	t.Logf("Temporary directory created: %s", tempDir)
+
+	// Create some test files and directories
+	testFiles := []string{"file1.txt", "file2.txt", "file3.log", "test1.txt", "subdir/file4.txt", "subdir/test2.log"}
+	for _, fileName := range testFiles {
+		filePath := filepath.Join(tempDir, fileName)
+		if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+			t.Fatalf("Failed to create test directory: %v", err)
+		}
+		if err := os.WriteFile(filePath, []byte("test content"), 0644); err != nil {
+			t.Fatalf("Failed to create test file: %v", err)
+		}
+	}
+
+	err = manager.ChangeFileNamesWithPattern(tempDir, "f*.txt", "new_f*.txt", false)
+	if err != nil {
+		t.Fatalf("ChangeFileNamesWithPattern returned an error: %v", err)
+	}
+
+	expectedFiles := []string{"new_file1.txt", "new_file2.txt", "file3.log", "test1.txt", "subdir/new_file4.txt", "subdir/test2.log"}
+
+	for _, expectedFile := range expectedFiles {
+		if _, err := os.Stat(filepath.Join(tempDir, expectedFile)); err != nil {
+			t.Errorf("Expected file %s to exist, but got error: %v", expectedFile, err)
+		}
+	}
+}

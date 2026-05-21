@@ -145,3 +145,30 @@ func ChangeFileNamesWithSecondRules(files Files, renameFunc RenameFunc, secondRu
 
 	return nil
 }
+
+// ChangeFileNamesWithPattern changes the names of files in the specified directory that match the oldPattern to newPattern.
+func ChangeFileNamesWithPattern(root string, oldPattern, newPattern string, overwrite bool) error {
+	if oldPattern == newPattern {
+		return fmt.Errorf("old pattern and new pattern are the same: %s", oldPattern)
+	}
+
+	files, err := ColletAllFiles(root, CheckWithWildcard(oldPattern))
+	if err != nil {
+		return fmt.Errorf("failed to collect files: %w", err)
+	}
+
+	if len(files) == 0 {
+		return fmt.Errorf("no files found matching the pattern: %s", oldPattern)
+	}
+
+	err = ChangeFileNames(files, func(file FileWithDir) string {
+		new := replaceWithWildcard(file, oldPattern, newPattern)
+		return new
+	}, overwrite)
+
+	if err != nil {
+		return fmt.Errorf("failed to change file names: %w", err)
+	}
+
+	return nil
+}

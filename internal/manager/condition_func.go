@@ -10,38 +10,73 @@ import (
 // ConditionFunc defines a function type that takes os.FileInfo and returns a boolean.
 type ConditionFunc func(os.FileInfo) bool
 
-// HasExtension returns a ConditionFunc that checks if a file has the specified extension.
-func HasExtension(ext string) ConditionFunc {
+// WithExtension returns a ConditionFunc that checks if a file has the specified extension.
+func WithExtension(ext string) ConditionFunc {
 	return func(info os.FileInfo) bool {
 		return !info.IsDir() && filepath.Ext(info.Name()) == ext
 	}
 }
 
-// DoesNotHaveExtension returns a ConditionFunc that checks if a file does not have the specified extension.
-func DoesNotHaveExtension(ext string) ConditionFunc {
+// WithoutExtension returns a ConditionFunc that checks if a file does not have the specified extension.
+func WithoutExtension(ext string) ConditionFunc {
 	return func(info os.FileInfo) bool {
 		return !info.IsDir() && filepath.Ext(info.Name()) != ext
 	}
 }
 
-// HasPrefix returns a ConditionFunc that checks if a file name has the specified prefix.
-func HasPrefix(prefix string) ConditionFunc {
+// WithPrefix returns a ConditionFunc that checks if a file name has the specified prefix.
+func WithPrefix(prefix string) ConditionFunc {
 	return func(info os.FileInfo) bool {
 		return !info.IsDir() && strings.HasPrefix(info.Name(), prefix)
 	}
 }
 
-// HasSuffix returns a ConditionFunc that checks if a file name has the specified suffix.
-func HasSuffix(suffix string) ConditionFunc {
+// WithoutPrefix returns a ConditionFunc that checks if a file name does not have the specified prefix.
+func WithoutPrefix(prefix string) ConditionFunc {
+	return func(info os.FileInfo) bool {
+		return !info.IsDir() && !strings.HasPrefix(info.Name(), prefix)
+	}
+}
+
+// WithSuffix returns a ConditionFunc that checks if a file name has the specified suffix.
+func WithSuffix(suffix string) ConditionFunc {
 	return func(info os.FileInfo) bool {
 		return !info.IsDir() && strings.HasSuffix(info.Name(), suffix)
 	}
 }
 
-// HasSubstring returns a ConditionFunc that checks if a file name contains the specified substring.
-func HasSubstring(substring string) ConditionFunc {
+// WithoutSuffix returns a ConditionFunc that checks if a file name does not have the specified suffix.
+func WithoutSuffix(suffix string) ConditionFunc {
+	return func(info os.FileInfo) bool {
+		return !info.IsDir() && !strings.HasSuffix(info.Name(), suffix)
+	}
+}
+
+// WithSubstring returns a ConditionFunc that checks if a file name contains the specified substring.
+func WithSubstring(substring string) ConditionFunc {
 	return func(info os.FileInfo) bool {
 		return !info.IsDir() && strings.Contains(info.Name(), substring)
+	}
+}
+
+// WithoutSubstring returns a ConditionFunc that checks if a file name does not contain the specified substring.
+func WithoutSubstring(substring string) ConditionFunc {
+	return func(info os.FileInfo) bool {
+		return !info.IsDir() && !strings.Contains(info.Name(), substring)
+	}
+}
+
+// IsHidden returns a ConditionFunc that checks if a file is hidden (starts with a dot).
+func IsHidden() ConditionFunc {
+	return func(info os.FileInfo) bool {
+		return !info.IsDir() && strings.HasPrefix(info.Name(), ".")
+	}
+}
+
+// IsNotHidden returns a ConditionFunc that checks if a file is not hidden (does not start with a dot).
+func IsNotHidden() ConditionFunc {
+	return func(info os.FileInfo) bool {
+		return !info.IsDir() && !strings.HasPrefix(info.Name(), ".")
 	}
 }
 
@@ -70,5 +105,29 @@ func ModifyTimeBefore(t time.Duration) ConditionFunc {
 func ModifyTimeAfter(t time.Duration) ConditionFunc {
 	return func(info os.FileInfo) bool {
 		return time.Since(info.ModTime()) < t
+	}
+}
+
+// CheckWithWildcard returns a ConditionFunc that checks if a file name matches the specified wildcard pattern.
+func CheckWithWildcard(pattern string) ConditionFunc {
+	return func(info os.FileInfo) bool {
+		matched, err := filepath.Match(pattern, info.Name())
+		if err != nil {
+			return false
+		}
+
+		return matched
+	}
+}
+
+// CheckWithoutWildcard returns a ConditionFunc that checks if a file name does not match the specified wildcard pattern.
+func CheckWithoutWildcard(pattern string) ConditionFunc {
+	return func(info os.FileInfo) bool {
+		matched, err := filepath.Match(pattern, info.Name())
+		if err != nil {
+			return false
+		}
+
+		return !matched
 	}
 }
