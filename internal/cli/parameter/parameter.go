@@ -19,28 +19,26 @@ type Parameters struct {
 
 // Parse converts CLI arguments into a structured Parameters instance, separating key-value
 // pairs and the main parameter.
-func Parse(fullCmd string) *Parameters {
+func Parse(cmds ...string) *Parameters {
 	mainParam := ""
 	program := ""
 	params := make(map[string]string)
 
-	fullParams := strings.Fields(fullCmd)
-
-	if len(fullParams) > 0 {
-		program = fullParams[0]
+	if len(cmds) > 0 {
+		program = cmds[0]
 	}
 
-	if len(fullParams) > 1 {
-		fullParams = fullParams[1:]
+	if len(cmds) > 1 {
+		cmds = cmds[1:]
 
-		for i := 0; i < len(fullParams); i++ {
-			param := fullParams[i]
+		for i := 0; i < len(cmds); i++ {
+			param := cmds[i]
 
 			if isKeyword(param) {
 				key := strings.TrimLeft(param, "-")
 
-				if i+1 < len(fullParams) && !isKeyword(fullParams[i+1]) {
-					params[key] = fullParams[i+1]
+				if i+1 < len(cmds) && !isKeyword(cmds[i+1]) {
+					params[key] = cmds[i+1]
 					i++
 				} else {
 					params[key] = CLI_TRUE_STR
