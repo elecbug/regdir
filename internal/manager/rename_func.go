@@ -5,6 +5,16 @@ import (
 	"strings"
 )
 
+// PatternType defines the type of pattern matching to use for renaming files.
+type PatternType int
+
+const (
+	// WILDCARD indicates that the oldPattern and newPattern use wildcard matching (e.g., "file_*.txt").
+	WILDCARD PatternType = iota
+	// REGEX indicates that the oldPattern and newPattern use regular expression matching (e.g., `file_(\d+)\.txt`).
+	REGEX
+)
+
 // RenameFunc defines a function type that takes a FileWithDir and returns a new name for the file.
 type RenameFunc func(FileWithDir) string
 

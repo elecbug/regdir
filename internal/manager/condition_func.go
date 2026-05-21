@@ -109,50 +109,33 @@ func ModifyTimeAfter(t time.Duration) ConditionFunc {
 	}
 }
 
-// CheckWithWildcard returns a ConditionFunc that checks if a file name matches the specified wildcard pattern.
-func CheckWithWildcard(pattern string) ConditionFunc {
+// FindWithWildcard returns a ConditionFunc that checks if a file name matches the specified wildcard pattern.
+func FindWithWildcard(pattern string, reverse bool) ConditionFunc {
 	return func(info os.FileInfo) bool {
 		matched, err := filepath.Match(pattern, info.Name())
 		if err != nil {
 			return false
 		}
 
-		return matched
-	}
-}
-
-// CheckWithoutWildcard returns a ConditionFunc that checks if a file name does not match the specified wildcard pattern.
-func CheckWithoutWildcard(pattern string) ConditionFunc {
-	return func(info os.FileInfo) bool {
-		matched, err := filepath.Match(pattern, info.Name())
-		if err != nil {
-			return false
+		if reverse {
+			return !matched
+		} else {
+			return matched
 		}
-
-		return !matched
 	}
 }
 
-// CheckWithRegex returns a ConditionFunc that checks if a file name matches the specified regex pattern.
-func CheckWithRegex(pattern string) ConditionFunc {
+// FindWithRegex returns a ConditionFunc that checks if a file name matches the specified regular expression pattern.
+func FindWithRegex(pattern string, reverse bool) ConditionFunc {
 	return func(info os.FileInfo) bool {
 		matched, err := regexp.MatchString(pattern, info.Name())
 		if err != nil {
 			return false
 		}
-
-		return matched
-	}
-}
-
-// CheckWithoutRegex returns a ConditionFunc that checks if a file name does not match the specified regex pattern.
-func CheckWithoutRegex(pattern string) ConditionFunc {
-	return func(info os.FileInfo) bool {
-		matched, err := regexp.MatchString(pattern, info.Name())
-		if err != nil {
-			return false
+		if reverse {
+			return !matched
+		} else {
+			return matched
 		}
-
-		return !matched
 	}
 }

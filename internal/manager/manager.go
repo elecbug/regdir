@@ -146,16 +146,6 @@ func ChangeFileNamesWithSecondRules(files Files, renameFunc RenameFunc, secondRu
 	return nil
 }
 
-// PatternType defines the type of pattern matching to use for renaming files.
-type PatternType int
-
-const (
-	// WILDCARD indicates that the oldPattern and newPattern use wildcard matching (e.g., "file_*.txt").
-	WILDCARD PatternType = iota
-	// REGEX indicates that the oldPattern and newPattern use regular expression matching (e.g., `file_(\d+)\.txt`).
-	REGEX
-)
-
 // ChangeFileNamesWithPattern changes the names of files in the specified directory that match the oldPattern to newPattern.
 func ChangeFileNamesWithPattern(root string, oldPattern, newPattern string, patternType PatternType, overwrite bool) error {
 	if oldPattern == newPattern {
@@ -165,9 +155,9 @@ func ChangeFileNamesWithPattern(root string, oldPattern, newPattern string, patt
 	var checkFunc ConditionFunc
 	switch patternType {
 	case REGEX:
-		checkFunc = CheckWithRegex(oldPattern)
+		checkFunc = FindWithRegex(oldPattern, false)
 	case WILDCARD:
-		checkFunc = CheckWithWildcard(oldPattern)
+		checkFunc = FindWithWildcard(oldPattern, false)
 	default:
 		return fmt.Errorf("unsupported pattern type: %v", patternType)
 	}
