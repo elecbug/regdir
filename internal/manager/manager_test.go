@@ -18,7 +18,7 @@ func TestColletAllFiles(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	t.Logf("Temporary directory created: %s", tempDir)
+	// t.Logf("Temporary directory created: %s", tempDir)
 
 	// Create some test files and directories
 	testFiles := []string{"file1.txt", "file2.txt", "file3.log", "test1.txt", "subdir/file4.txt", "subdir/test2.log"}
@@ -85,7 +85,7 @@ func TestChangeFileNames(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	t.Logf("Temporary directory created: %s", tempDir)
+	// t.Logf("Temporary directory created: %s", tempDir)
 
 	// Create some test files and directories
 	testFiles := []string{"file1.txt", "file2.txt", "file3.log", "test1.txt", "subdir/file4.txt", "subdir/test2.log"}
@@ -194,7 +194,7 @@ func TestChangeFileNamesWithSecondRules(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	t.Logf("Temporary directory created: %s", tempDir)
+	// t.Logf("Temporary directory created: %s", tempDir)
 
 	filesToCreate := []string{
 		"a.txt",
@@ -246,6 +246,7 @@ func TestChangeFileNamesWithSecondRules(t *testing.T) {
 	}
 }
 
+// TestChangeFileNamesWithPattern tests the ChangeFileNamesWithPattern function to ensure it correctly renames files based on the provided pattern and pattern type.
 func TestChangeFileNamesWithPattern(t *testing.T) {
 	// Create a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "testdir")
@@ -254,7 +255,7 @@ func TestChangeFileNamesWithPattern(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	t.Logf("Temporary directory created: %s", tempDir)
+	// t.Logf("Temporary directory created: %s", tempDir)
 
 	// Create some test files and directories
 	testFiles := []string{"file1.txt", "file2.txt", "file3.log", "test1.txt", "subdir/file4.txt", "subdir/test2.log"}
@@ -292,5 +293,164 @@ func TestChangeFileNamesWithPattern(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(tempDir, expectedFile)); err != nil {
 			t.Errorf("Expected file %s to exist, but got error: %v", expectedFile, err)
 		}
+	}
+}
+
+// TestMoveFiles tests the MoveFiles function to ensure it correctly moves files to the target directory, handling overwrite scenarios as expected.
+func TestMoveFiles(t *testing.T) {
+	// Create a temporary directory for testing
+	tempDir, err := os.MkdirTemp("", "testdir")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// t.Logf("Temporary directory created: %s", tempDir)
+
+	// Create a target directory
+	targetDir := filepath.Join(tempDir, "target")
+	if err := os.Mkdir(targetDir, 0755); err != nil {
+		t.Fatalf("Failed to create target directory: %v", err)
+	}
+
+	// Create some test files
+	testFiles := []string{"file1.txt", "file2.txt"}
+	for _, fileName := range testFiles {
+		filePath := filepath.Join(tempDir, fileName)
+		if err := os.WriteFile(filePath, []byte("test content"), 0644); err != nil {
+			t.Fatalf("Failed to create test file: %v", err)
+		}
+	}
+
+	filesToMove, err := manager.ColletAllFiles(tempDir, func(info os.FileInfo) bool {
+		return !info.IsDir() && (info.Name() == "file1.txt" || info.Name() == "file2.txt")
+	})
+	if err != nil {
+		t.Fatalf("ColletAllFiles returned an error: %v", err)
+	}
+
+	err = manager.MoveFiles(filesToMove, targetDir, false)
+	if err != nil {
+		t.Fatalf("MoveFiles returned an error: %v", err)
+	}
+
+	for _, fileName := range testFiles {
+		if _, err := os.Stat(filepath.Join(targetDir, fileName)); err != nil {
+			t.Errorf("Expected file %s to be moved to target directory, but got error: %v", fileName, err)
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, fileName)); !os.IsNotExist(err) {
+			t.Errorf("Expected original file %s to be moved, but it still exists in the original location", fileName)
+		}
+	}
+
+	// Test overwrite scenario
+	if err := os.WriteFile(filepath.Join(targetDir, "file1.txt"), []byte("existing content"), 0644); err != nil {
+		t.Fatalf("Failed to create existing file in target directory: %v", err)
+	}
+
+	filesToMove, err = manager.ColletAllFiles(tempDir, func(info os.FileInfo) bool {
+		return !info.IsDir() && info.Name() == "file1.txt"
+	})
+	if err != nil {
+		t.Fatalf("ColletAllFiles returned an error: %v", err)
+	}
+
+	err = manager.MoveFiles(filesToMove, targetDir, false)
+	if err == nil {
+		t.Fatalf("Expected error due to existing file in target directory, but got nil")
+	}
+
+	if !strings.Contains(err.Error(), "target already exists") {
+		t.Errorf("Expected error message to contain 'target already exists', got: %v", err)
+	}
+
+	err = manager.MoveFiles(filesToMove, targetDir, true)
+	if err != nil {
+		t.Fatalf("MoveFiles with overwrite returned an error: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(targetDir, "file1.txt")); err != nil {
+		t.Errorf("Expected file1.txt to exist in target directory after overwrite, but got error: %v", err)
+	}
+}
+
+// TestCopyFiles tests the CopyFiles function to ensure it correctly copies files to the target directory, handling overwrite scenarios as expected.
+func TestCopyFiles(t *testing.T) {
+	// Create a temporary directory for testing
+	tempDir, err := os.MkdirTemp("", "testdir")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// t.Logf("Temporary directory created: %s", tempDir)
+
+	// Create a target directory
+	targetDir := filepath.Join(tempDir, "target")
+	if err := os.Mkdir(targetDir, 0755); err != nil {
+		t.Fatalf("Failed to create target directory: %v", err)
+	}
+
+	// Create some test files
+	testFiles := []string{"file1.txt", "file2.txt"}
+	for _, fileName := range testFiles {
+		filePath := filepath.Join(tempDir, fileName)
+		if err := os.WriteFile(filePath, []byte("test content"), 0644); err != nil {
+			t.Fatalf("Failed to create test file: %v", err)
+		}
+	}
+
+	filesToCopy, err := manager.ColletAllFiles(tempDir, func(info os.FileInfo) bool {
+		return !info.IsDir() && (info.Name() == "file1.txt" || info.Name() == "file2.txt")
+	})
+	if err != nil {
+		t.Fatalf("ColletAllFiles returned an error: %v", err)
+	}
+
+	err = manager.CopyFiles(filesToCopy, targetDir, false)
+	if err != nil {
+		t.Fatalf("CopyFiles returned an error: %v", err)
+	}
+
+	for _, fileName := range testFiles {
+		if _, err := os.Stat(filepath.Join(targetDir, fileName)); err != nil {
+			t.Errorf("Expected file %s to be copied to target directory, but got error: %v", fileName, err)
+		}
+		if _, err := os.Stat(filepath.Join(tempDir, fileName)); err != nil {
+			t.Errorf("Expected original file %s to still exist in original location, but got error: %v", fileName, err)
+		}
+	}
+
+	// Test overwrite scenario
+	if err := os.WriteFile(filepath.Join(targetDir, "file1.txt"), []byte("existing content"), 0644); err != nil {
+		t.Fatalf("Failed to create existing file in target directory: %v", err)
+	}
+
+	filesToCopy, err = manager.ColletAllFiles(tempDir, func(info os.FileInfo) bool {
+		return !info.IsDir() && info.Name() == "file1.txt"
+	})
+	if err != nil {
+		t.Fatalf("ColletAllFiles returned an error: %v", err)
+	}
+
+	err = manager.CopyFiles(filesToCopy, targetDir, false)
+	if err == nil {
+		t.Fatalf("Expected error due to existing file in target directory, but got nil")
+	}
+
+	if !strings.Contains(err.Error(), "target already exists") {
+		t.Errorf("Expected error message to contain 'target already exists', got: %v", err)
+	}
+
+	err = manager.CopyFiles(filesToCopy, targetDir, true)
+	if err != nil {
+		t.Fatalf("CopyFiles with overwrite returned an error: %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(targetDir, "file1.txt")); err != nil {
+		t.Errorf("Expected file1.txt to exist in target directory after overwrite, but got error: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(tempDir, "file1.txt")); err != nil {
+		t.Errorf("Expected original file1.txt to still exist in original location after copy, but got error: %v", err)
 	}
 }

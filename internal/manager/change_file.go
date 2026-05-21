@@ -8,36 +8,6 @@ import (
 	"strings"
 )
 
-// ColletAllFiles collects all files in the specified directory that satisfy the given condition.
-func ColletAllFiles(root string, condition ConditionFunc) (Files, error) {
-	info, err := os.Stat(root)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get file info: %w", err)
-	}
-
-	if !info.IsDir() {
-		return nil, fmt.Errorf("provided path is not a directory")
-	}
-
-	files := make(Files, 0)
-	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return fmt.Errorf("failed to walk directory: %w", err)
-		}
-
-		if condition(info) {
-			files = append(files, FileWithDir{FileInfo: info, ParentDir: filepath.Dir(path)})
-		}
-		return nil
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to collect files: %w", err)
-	}
-
-	return files, nil
-}
-
 // ChangeFileNames changes the names of the files in the provided slice using the renameFunc to generate new names.
 // If overwrite is false, it returns an error when the target path already exists.
 func ChangeFileNames(files Files, renameFunc RenameFunc, overwrite bool) error {
@@ -147,6 +117,8 @@ func ChangeFileNamesWithSecondRules(files Files, renameFunc RenameFunc, secondRu
 }
 
 // ChangeFileNamesWithPattern changes the names of files in the specified directory that match the oldPattern to newPattern.
+// e.g. Wildcard, with oldPattern "file_*.txt" and newPattern "document_*.txt", "file_123.txt" will be renamed to "document_123.txt".
+// e.g. Regex, with oldPattern `file_(\d+)\.txt` and newPattern `document_$1.txt`, "file_123.txt" will be renamed to "document_123.txt".
 func ChangeFileNamesWithPattern(root string, oldPattern, newPattern string, patternType PatternType, overwrite bool) error {
 	if oldPattern == newPattern {
 		return fmt.Errorf("old pattern and new pattern are the same: %s", oldPattern)
@@ -184,6 +156,58 @@ func ChangeFileNamesWithPattern(root string, oldPattern, newPattern string, patt
 
 	if err != nil {
 		return fmt.Errorf("failed to change file names: %w", err)
+	}
+
+	return nil
+}
+
+// MoveFiles moves the specified files to the target directory. If overwrite is false,
+// it returns an error when the target path already exists.
+func MoveFiles(files Files, targetDir string, overwrite bool) error {
+	for _, file := range files {
+		oldPath := filepath.Join(file.ParentDir, file.Name())
+		newPath := filepath.Join(targetDir, file.Name())
+
+		if !overwrite {
+			if _, err := os.Stat(newPath); err == nil {
+				return fmt.Errorf("target already exists: %s", newPath)
+			} else if !os.IsNotExist(err) {
+				return fmt.Errorf("failed to check target path %s: %w", newPath, err)
+			}
+		}
+
+		if err := os.Rename(oldPath, newPath); err != nil {
+			return fmt.Errorf("failed to move %s: %w", file.Name(), err)
+		}
+	}
+
+	return nil
+}
+
+// CopyFiles copies the specified files to the target directory. If overwrite is false,
+// it returns an error when the target path already exists.
+func CopyFiles(files Files, targetDir string, overwrite bool) error {
+	for _, file := range files {
+		oldPath := filepath.Join(file.ParentDir, file.Name())
+		newPath := filepath.Join(targetDir, file.Name())
+
+		if !overwrite {
+			if _, err := os.Stat(newPath); err == nil {
+				return fmt.Errorf("target already exists: %s", newPath)
+			} else if !os.IsNotExist(err) {
+				return fmt.Errorf("failed to check target path %s: %w", newPath, err)
+			}
+		}
+
+		input, err := os.ReadFile(oldPath)
+		if err != nil {
+			return fmt.Errorf("failed to read file %s: %w", oldPath, err)
+		}
+
+		err = os.WriteFile(newPath, input, file.Mode())
+		if err != nil {
+			return fmt.Errorf("failed to write file %s: %w", newPath, err)
+		}
 	}
 
 	return nil
