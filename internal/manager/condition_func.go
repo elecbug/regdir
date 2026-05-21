@@ -3,6 +3,7 @@ package manager
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -124,6 +125,30 @@ func CheckWithWildcard(pattern string) ConditionFunc {
 func CheckWithoutWildcard(pattern string) ConditionFunc {
 	return func(info os.FileInfo) bool {
 		matched, err := filepath.Match(pattern, info.Name())
+		if err != nil {
+			return false
+		}
+
+		return !matched
+	}
+}
+
+// CheckWithRegex returns a ConditionFunc that checks if a file name matches the specified regex pattern.
+func CheckWithRegex(pattern string) ConditionFunc {
+	return func(info os.FileInfo) bool {
+		matched, err := regexp.MatchString(pattern, info.Name())
+		if err != nil {
+			return false
+		}
+
+		return matched
+	}
+}
+
+// CheckWithoutRegex returns a ConditionFunc that checks if a file name does not match the specified regex pattern.
+func CheckWithoutRegex(pattern string) ConditionFunc {
+	return func(info os.FileInfo) bool {
+		matched, err := regexp.MatchString(pattern, info.Name())
 		if err != nil {
 			return false
 		}

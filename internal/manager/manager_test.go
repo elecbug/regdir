@@ -247,7 +247,6 @@ func TestChangeFileNamesWithSecondRules(t *testing.T) {
 }
 
 func TestChangeFileNamesWithPattern(t *testing.T) {
-
 	// Create a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "testdir")
 	if err != nil {
@@ -269,12 +268,25 @@ func TestChangeFileNamesWithPattern(t *testing.T) {
 		}
 	}
 
-	err = manager.ChangeFileNamesWithPattern(tempDir, "f*.txt", "new_f*.txt", false)
+	err = manager.ChangeFileNamesWithPattern(tempDir, "f*.txt", "new_f*.txt", manager.WILDCARD, false)
 	if err != nil {
 		t.Fatalf("ChangeFileNamesWithPattern returned an error: %v", err)
 	}
 
 	expectedFiles := []string{"new_file1.txt", "new_file2.txt", "file3.log", "test1.txt", "subdir/new_file4.txt", "subdir/test2.log"}
+
+	for _, expectedFile := range expectedFiles {
+		if _, err := os.Stat(filepath.Join(tempDir, expectedFile)); err != nil {
+			t.Errorf("Expected file %s to exist, but got error: %v", expectedFile, err)
+		}
+	}
+
+	err = manager.ChangeFileNamesWithPattern(tempDir, `new_file(\d+)\.txt`, `f$1.txt`, manager.REGEX, false)
+	if err != nil {
+		t.Fatalf("ChangeFileNamesWithPattern returned an error: %v", err)
+	}
+
+	expectedFiles = []string{"f1.txt", "f2.txt", "file3.log", "test1.txt", "subdir/f4.txt", "subdir/test2.log"}
 
 	for _, expectedFile := range expectedFiles {
 		if _, err := os.Stat(filepath.Join(tempDir, expectedFile)); err != nil {

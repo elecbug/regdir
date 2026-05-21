@@ -146,13 +146,33 @@ func ChangeFileNamesWithSecondRules(files Files, renameFunc RenameFunc, secondRu
 	return nil
 }
 
+// PatternType defines the type of pattern matching to use for renaming files.
+type PatternType int
+
+const (
+	// WILDCARD indicates that the oldPattern and newPattern use wildcard matching (e.g., "file_*.txt").
+	WILDCARD PatternType = iota
+	// REGEX indicates that the oldPattern and newPattern use regular expression matching (e.g., `file_(\d+)\.txt`).
+	REGEX
+)
+
 // ChangeFileNamesWithPattern changes the names of files in the specified directory that match the oldPattern to newPattern.
-func ChangeFileNamesWithPattern(root string, oldPattern, newPattern string, overwrite bool) error {
+func ChangeFileNamesWithPattern(root string, oldPattern, newPattern string, patternType PatternType, overwrite bool) error {
 	if oldPattern == newPattern {
 		return fmt.Errorf("old pattern and new pattern are the same: %s", oldPattern)
 	}
 
-	files, err := ColletAllFiles(root, CheckWithWildcard(oldPattern))
+	var checkFunc ConditionFunc
+	switch patternType {
+	case REGEX:
+		checkFunc = CheckWithRegex(oldPattern)
+	case WILDCARD:
+		checkFunc = CheckWithWildcard(oldPattern)
+	default:
+		return fmt.Errorf("unsupported pattern type: %v", patternType)
+	}
+
+	files, err := ColletAllFiles(root, checkFunc)
 	if err != nil {
 		return fmt.Errorf("failed to collect files: %w", err)
 	}
@@ -162,8 +182,14 @@ func ChangeFileNamesWithPattern(root string, oldPattern, newPattern string, over
 	}
 
 	err = ChangeFileNames(files, func(file FileWithDir) string {
-		new := replaceWithWildcard(file, oldPattern, newPattern)
-		return new
+		switch patternType {
+		case REGEX:
+			return replaceWithRegex(file, oldPattern, newPattern)
+		case WILDCARD:
+			return replaceWithWildcard(file, oldPattern, newPattern)
+		default:
+			return file.Name()
+		}
 	}, overwrite)
 
 	if err != nil {
